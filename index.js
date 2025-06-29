@@ -12,6 +12,14 @@ const {
   ASSET_ADDRESS,
   SWAP_COUNT
 } = process.env;
+console.log("✅ Loaded env vars:");
+console.log("PRIVATE_KEY:", PRIVATE_KEY ? PRIVATE_KEY.slice(0, 6) + "..." : "❌ Not Found");
+console.log("RPC_URL:", RPC_URL || "❌ Not Found");
+console.log("CONTRACT_ADDRESS:", CONTRACT_ADDRESS || "❌ Not Found");
+console.log("RECEIVER:", RECEIVER || "❌ Not Found");
+console.log("AMOUNT:", AMOUNT || "❌ Not Found");
+console.log("ASSET_ADDRESS:", ASSET_ADDRESS || "❌ Not Found");
+console.log("SWAP_COUNT:", SWAP_COUNT || "❌ Not Found");
 
 // Union Protocol contract ABI (simplified example for native token bridging)
 const ABI = [
