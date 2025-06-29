@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const { ethers } = require("ethers");
 
@@ -9,6 +10,7 @@ const {
   RECEIVER,
   AMOUNT,
   ASSET_ADDRESS,
+  SWAP_COUNT
 } = process.env;
 
 // Union Protocol contract ABI (simplified example for native token bridging)
@@ -33,30 +35,36 @@ async function bridgeSeiToXion() {
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
 
-    const amountInWei = ethers.utils.parseUnits(AMOUNT, 18); // SEI native typically 18 decimals
+    const amountInWei = ethers.utils.parseUnits(AMOUNT, 18);
 
-    console.log("\n🚀 Starting bridge from SEI EVM to XION Cosmos");
-    console.log("From address:", wallet.address);
-    console.log("To Cosmos:", RECEIVER);
-    console.log("Amount:", AMOUNT, "SEI");
+    const balance = await provider.getBalance(wallet.address);
+    console.log("💰 Wallet balance:", ethers.utils.formatEther(balance), "SEI");
+    if (balance.lt(amountInWei)) {
+      console.error("❌ Not enough SEI to continue");
+      return;
+    }
 
-    const tx = await contract.transferToCosmos(
-      ASSET_ADDRESS,
-      amountInWei,
-      RECEIVER,
-      "xion-testnet-2",
-      {
-        gasLimit: 300_000,
-        value: amountInWei, // Required for native SEI transfer
-      }
-    );
+    for (let i = 1; i <= parseInt(SWAP_COUNT); i++) {
+      console.log(`\n🔁 [${i}/${SWAP_COUNT}] Starting swap`);
+      const tx = await contract.transferToCosmos(
+        ASSET_ADDRESS,
+        amountInWei,
+        RECEIVER,
+        "xion-testnet-2",
+        {
+          gasLimit: 300_000,
+          value: amountInWei
+        }
+      );
 
-    console.log("\u23F3 Waiting for transaction confirmation...");
-    const receipt = await tx.wait();
-    console.log("\n✅ Transaction confirmed!");
-    console.log("TX Hash:", receipt.transactionHash);
+      console.log("⏳ Waiting for transaction to confirm...");
+      const receipt = await tx.wait();
+      console.log("✅ Swap", i, "confirmed! TX Hash:", receipt.transactionHash);
+    }
+
+    console.log("\n🎉 All swaps complete!");
   } catch (error) {
-    console.error("\n❌ Transaction failed:", error.message);
+    console.error("\n❌ Error:", error.message);
   }
 }
 
