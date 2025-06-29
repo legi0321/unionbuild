@@ -1,79 +1,92 @@
 require("dotenv").config();
-const ethers = require("ethers");
+const { ethers } = require("ethers");
 
-// Load environment variables
 const {
-  PRIVATE_KEY,
+  SEI_PRIVATE_KEYS,
   RPC_URL,
   CONTRACT_ADDRESS,
   RECEIVER,
   AMOUNT,
   ASSET_ADDRESS,
-  SWAP_COUNT
+  SWAP_COUNT,
+  TX_DELAY_MS,
+  WALLET_DELAY_MS,
+  LOOP,
+  LOOP_INTERVAL_MS
 } = process.env;
 
-// Union Protocol contract ABI (simplified)
 const ABI = [
   {
-    "inputs": [
-      { "internalType": "address", "name": "asset", "type": "address" },
-      { "internalType": "uint256", "name": "amount", "type": "uint256" },
-      { "internalType": "string", "name": "destinationAddress", "type": "string" },
-      { "internalType": "string", "name": "destinationChain", "type": "string" }
+    inputs: [
+      { internalType: "address", name: "asset", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+      { internalType: "string", name: "destinationAddress", type: "string" },
+      { internalType: "string", name: "destinationChain", type: "string" }
     ],
-    "name": "transferToCosmos",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
+    name: "transferToCosmos",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function"
   }
 ];
 
-async function bridgeSeiToXion() {
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+async function swapWithWallet(pk, index) {
   try {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
-    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+    const wallet = new ethers.Wallet(pk, provider);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
-
     const amountInWei = ethers.parseUnits(AMOUNT, 18);
     const balance = await provider.getBalance(wallet.address);
 
-    console.log("✅ Loaded env vars:");
-    console.log("PRIVATE_KEY:", PRIVATE_KEY ? PRIVATE_KEY.slice(0, 6) + "..." : "❌ Not Found");
-    console.log("RPC_URL:", RPC_URL || "❌ Not Found");
-    console.log("CONTRACT_ADDRESS:", CONTRACT_ADDRESS || "❌ Not Found");
-    console.log("RECEIVER:", RECEIVER || "❌ Not Found");
-    console.log("AMOUNT:", AMOUNT || "❌ Not Found");
-    console.log("ASSET_ADDRESS:", ASSET_ADDRESS || "❌ Not Found");
-    console.log("SWAP_COUNT:", SWAP_COUNT || "❌ Not Found");
-    console.log("💰 Wallet balance:", ethers.formatEther(balance), "SEI");
+    console.log(`\n[${index + 1}] 🔑 ${wallet.address}`);
+    console.log(`   💰 Balance: ${ethers.formatEther(balance)} SEI`);
 
-  if (balance < amountInWei) {
-      console.error("❌ Not enough SEI to continue");
+    if (balance.lt(amountInWei)) {
+      console.log("   ❌ Not enough balance");
       return;
     }
 
-    for (let i = 1; i <= parseInt(SWAP_COUNT); i++) {
-      console.log(`\n🔁 [${i}/${SWAP_COUNT}] Starting swap`);
+    for (let i = 0; i < Number(SWAP_COUNT); i++) {
+      console.log(`   🔁 Swap [${i + 1}/${SWAP_COUNT}]`);
       const tx = await contract.transferToCosmos(
         ASSET_ADDRESS,
         amountInWei,
         RECEIVER,
         "xion-testnet-2",
         {
-          gasLimit: 300_000,
-          value: amountInWei,
+          gasLimit: 300000,
+          value: amountInWei
         }
       );
-
-      console.log("⏳ Waiting for transaction to confirm...");
       const receipt = await tx.wait();
-      console.log("✅ Swap", i, "confirmed! TX Hash:", receipt.hash);
+      console.log(`   ✅ TX Confirmed: ${receipt.hash}`);
+      await sleep(Number(TX_DELAY_MS));
     }
-
-    console.log("\n🎉 All swaps complete!");
-  } catch (error) {
-    console.error("\n❌ Error:", error.message);
+  } catch (e) {
+    console.error(`   ❌ Wallet ${index + 1} Error:`, e.message);
   }
 }
 
-bridgeSeiToXion();
+async function runAllWallets() {
+  const keys = SEI_PRIVATE_KEYS.split(",");
+  for (let i = 0; i < keys.length; i++) {
+    await swapWithWallet(keys[i], i);
+    if (i < keys.length - 1) await sleep(Number(WALLET_DELAY_MS));
+  }
+}
+
+(async () => {
+  if (LOOP === "true") {
+    while (true) {
+      console.log("\n🚀 [LOOP START]");
+      await runAllWallets();
+      console.log("🕒 Menunggu next loop...\n");
+      await sleep(Number(LOOP_INTERVAL_MS));
+    }
+  } else {
+    await runAllWallets();
+    console.log("✅ Semua wallet selesai (no-loop).");
+  }
+})();
