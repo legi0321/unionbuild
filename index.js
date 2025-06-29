@@ -1,6 +1,5 @@
-
 require("dotenv").config();
-const { ethers } = require("ethers");
+const ethers = require("ethers");
 
 // Load environment variables
 const {
@@ -12,16 +11,8 @@ const {
   ASSET_ADDRESS,
   SWAP_COUNT
 } = process.env;
-console.log("✅ Loaded env vars:");
-console.log("PRIVATE_KEY:", PRIVATE_KEY ? PRIVATE_KEY.slice(0, 6) + "..." : "❌ Not Found");
-console.log("RPC_URL:", RPC_URL || "❌ Not Found");
-console.log("CONTRACT_ADDRESS:", CONTRACT_ADDRESS || "❌ Not Found");
-console.log("RECEIVER:", RECEIVER || "❌ Not Found");
-console.log("AMOUNT:", AMOUNT || "❌ Not Found");
-console.log("ASSET_ADDRESS:", ASSET_ADDRESS || "❌ Not Found");
-console.log("SWAP_COUNT:", SWAP_COUNT || "❌ Not Found");
 
-// Union Protocol contract ABI (simplified example for native token bridging)
+// Union Protocol contract ABI (simplified)
 const ABI = [
   {
     "inputs": [
@@ -43,11 +34,20 @@ async function bridgeSeiToXion() {
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
 
-    const amountInWei = ethers.utils.parseUnits(AMOUNT, 18);
-
+    const amountInWei = ethers.parseUnits(AMOUNT, 18);
     const balance = await provider.getBalance(wallet.address);
-    console.log("💰 Wallet balance:", ethers.utils.formatEther(balance), "SEI");
-    if (balance.lt(amountInWei)) {
+
+    console.log("✅ Loaded env vars:");
+    console.log("PRIVATE_KEY:", PRIVATE_KEY ? PRIVATE_KEY.slice(0, 6) + "..." : "❌ Not Found");
+    console.log("RPC_URL:", RPC_URL || "❌ Not Found");
+    console.log("CONTRACT_ADDRESS:", CONTRACT_ADDRESS || "❌ Not Found");
+    console.log("RECEIVER:", RECEIVER || "❌ Not Found");
+    console.log("AMOUNT:", AMOUNT || "❌ Not Found");
+    console.log("ASSET_ADDRESS:", ASSET_ADDRESS || "❌ Not Found");
+    console.log("SWAP_COUNT:", SWAP_COUNT || "❌ Not Found");
+    console.log("💰 Wallet balance:", ethers.formatEther(balance), "SEI");
+
+  if (balance < amountInWei) {
       console.error("❌ Not enough SEI to continue");
       return;
     }
@@ -61,13 +61,13 @@ async function bridgeSeiToXion() {
         "xion-testnet-2",
         {
           gasLimit: 300_000,
-          value: amountInWei
+          value: amountInWei,
         }
       );
 
       console.log("⏳ Waiting for transaction to confirm...");
       const receipt = await tx.wait();
-      console.log("✅ Swap", i, "confirmed! TX Hash:", receipt.transactionHash);
+      console.log("✅ Swap", i, "confirmed! TX Hash:", receipt.hash);
     }
 
     console.log("\n🎉 All swaps complete!");
