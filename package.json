@@ -1,0 +1,17 @@
+{
+  "name": "sei-xion-bot",
+  "version": "1.0.0",
+  "description": "Bot otomatis transfer IBC dari SEI ke XION menggunakan private key dan .env",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@cosmjs/encoding": "^0.33.2",
+    "@cosmjs/proto-signing": "^0.33.2",
+    "@cosmjs/stargate": "^0.33.2",
+    "dotenv": "^16.3.1"
+  },
+  "author": "Bot SEI ↔️ XION",
+  "license": "MIT"
+}
