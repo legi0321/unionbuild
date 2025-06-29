@@ -12,7 +12,7 @@ const {
   TX_DELAY_MS,
   WALLET_DELAY_MS,
   LOOP,
-  LOOP_INTERVAL_MS
+  LOOP_INTERVAL_MS,
 } = process.env;
 
 const ABI = [
@@ -21,16 +21,16 @@ const ABI = [
       { internalType: "address", name: "asset", type: "address" },
       { internalType: "uint256", name: "amount", type: "uint256" },
       { internalType: "string", name: "destinationAddress", type: "string" },
-      { internalType: "string", name: "destinationChain", type: "string" }
+      { internalType: "string", name: "destinationChain", type: "string" },
     ],
     name: "transferToCosmos",
     outputs: [],
     stateMutability: "payable",
-    type: "function"
-  }
+    type: "function",
+  },
 ];
 
-const sleep = ms => new Promise(res => setTimeout(res, ms));
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 async function swapWithWallet(pk, index) {
   try {
@@ -43,7 +43,7 @@ async function swapWithWallet(pk, index) {
     console.log(`\n[${index + 1}] 🔑 ${wallet.address}`);
     console.log(`   💰 Balance: ${ethers.formatEther(balance)} SEI`);
 
-    if (balance.lt(amountInWei)) {
+    if (balance < amountInWei) {
       console.log("   ❌ Not enough balance");
       return;
     }
@@ -57,7 +57,7 @@ async function swapWithWallet(pk, index) {
         "xion-testnet-2",
         {
           gasLimit: 300000,
-          value: amountInWei
+          value: amountInWei,
         }
       );
       const receipt = await tx.wait();
@@ -89,4 +89,6 @@ async function runAllWallets() {
     await runAllWallets();
     console.log("✅ Semua wallet selesai (no-loop).");
   }
-})();
+})().catch((err) => {
+  console.error("❌ Fatal Error:", err.message);
+});
